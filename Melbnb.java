@@ -43,17 +43,17 @@ public class Melbnb {
                 String[] propertyData = line.split(csvSplitBy);
 
                 if (propertyData.length == 11) {
-                    String name = propertyData[0];
-                    String location = propertyData[1];
-                    String description = propertyData[2];
-                    String type = propertyData[3];
-                    String hostName = propertyData[4];
-                    int maxGuests = Integer.parseInt(propertyData[5]);
-                    double rating = Double.parseDouble(propertyData[6]);
-                    double pricePerNight = Double.parseDouble(propertyData[7]);
-                    double serviceFeePerNight = Double.parseDouble(propertyData[8]);
-                    double cleaningFee = Double.parseDouble(propertyData[9]);
-                    int weeklyDiscount = Integer.parseInt(propertyData[10]);
+                    String name = propertyData[0].trim();
+                    String location = propertyData[1].trim();
+                    String description = propertyData[2].trim();
+                    String type = propertyData[3].trim();
+                    String hostName = propertyData[4].trim();
+                    int maxGuests = Integer.parseInt(propertyData[5].trim());
+                    double rating = Double.parseDouble(propertyData[6].trim());
+                    double pricePerNight = Double.parseDouble(propertyData[7].trim());
+                    double serviceFeePerNight = Double.parseDouble(propertyData[8].trim());
+                    double cleaningFee = Double.parseDouble(propertyData[9].trim());
+                    int weeklyDiscount = Integer.parseInt(propertyData[10].trim());
 
                     Property property = new Property(name, location, description, type, hostName,
                             maxGuests, rating, pricePerNight, serviceFeePerNight, cleaningFee, weeklyDiscount);
@@ -152,19 +152,14 @@ public class Melbnb {
                         System.out.println("> Browse by type of place");
                         pageBreak();
 
-                        // Step 1: Get unique types of properties
-                        Set<String> types = new TreeSet<>(); // Using TreeSet to keep types sorted
-                        for (Property property : propertyDatabase.getProperties()) {
-                            types.add(property.getType());
+                        List<String> types = propertyDatabase.getTypes();
+                        int typeCount = types.size() + 1; // +1 for "Back to main menu"
+                        for (int i = 0; i < types.size(); i++) {
+                            String capitalizedType = types.get(i).substring(0, 1).toUpperCase()
+                                    + types.get(i).substring(1); // Capitalize type names
+                            System.out.println(RESET + (i + 1) + ") " + capitalizedType);
                         }
-
-                        // Step 2: Display types
-                        int typeCount = 1;
-                        for (String type : types) {
-                            System.out.println(RESET + typeCount + ") " + type);
-                            typeCount++;
-                        }
-                        System.out.println(typeCount + ") Back to main menu");
+                        System.out.println(RESET + (types.size() + 1) + ") Back to main menu");
 
                         System.out.print(RESET + "Please select: " + GREEN);
                         String subChoice = scnr.nextLine();
@@ -180,21 +175,16 @@ public class Melbnb {
                             break; // Go back to the main menu
                         } else if (validSubChoice > 0 && validSubChoice < typeCount) {
                             while (true) {
-                                String selectedType = (String) types.toArray()[validSubChoice - 1];
-
-                                // Step 3: Search properties by selected type
-                                List<Property> matchedType = new ArrayList<>();
-                                for (Property property : propertyDatabase.getProperties()) {
-                                    if (property.getType().equalsIgnoreCase(selectedType)) {
-                                        matchedType.add(property);
-                                    }
-                                }
+                                String selectedType = types.get(validSubChoice - 1);
+                                // Return matched properties for the selected type
+                                List<Property> matchedType = propertyDatabase.getByType(selectedType);
 
                                 for (int i = 0; i < matchedType.size(); i++) {
                                     System.out.println(RESET + (i + 1) + ") " + matchedType.get(i).getName());
                                 }
                                 System.out.println(RESET + (matchedType.size() + 1) + ") Back to main menu");
                                 System.out.print(RESET + "Please select: " + GREEN);
+
                                 String typeSubChoice = scnr.nextLine();
                                 int validTypeSubChoice;
                                 if (isNumber(typeSubChoice)
@@ -205,7 +195,7 @@ public class Melbnb {
                                     continue; // Restart the loop for type selection
                                 }
 
-                                // Step 4: Handle booking or going back
+                                // Handle booking or going back
                                 if (validTypeSubChoice == matchedType.size() + 1) {
                                     break; // Go back to the main menu
                                 } else if (validTypeSubChoice > 0 && validTypeSubChoice <= matchedType.size()) {

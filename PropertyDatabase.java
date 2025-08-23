@@ -2,7 +2,8 @@ import java.util.*;
 
 public class PropertyDatabase implements Searchable<Property> {
     private List<Property> properties;
-    
+    private Map<String, List<Property>> byType = new HashMap<>();
+    private Map<String, List<Property>> byLocation = new HashMap<>();
 
     public PropertyDatabase() {
         this.properties = new ArrayList<>();
@@ -10,10 +11,27 @@ public class PropertyDatabase implements Searchable<Property> {
 
     public void addProperty(Property property) {
         this.properties.add(property);
+        index(property);
     }
 
-    public List<Property> getProperties() {
-        return properties;
+    private void index(Property property) {
+        // index by type
+        String t = property.getType().toLowerCase();
+        byType.computeIfAbsent(t, k -> new ArrayList<>()).add(property);
+        // index by location
+        byLocation.computeIfAbsent(property.getLocation(), k -> new ArrayList<>()).add(property);
+    }
+
+    public List<Property> getProperties() { return properties; }
+
+    // Get sorted unique properties by type
+    public List<String> getTypes() {
+        return new ArrayList<>(new TreeSet<>(byType.keySet()));
+    }
+
+    // Get properties by type
+    public List<Property> getByType(String type) {
+        return byType.getOrDefault(type.toLowerCase(), Collections.emptyList());
     }
 
     @Override
@@ -22,9 +40,7 @@ public class PropertyDatabase implements Searchable<Property> {
         String lowerKeyword = keyword.toLowerCase();
 
         for (Property property : properties) {
-            if (property.matchesByLocation(lowerKeyword)) {
-                return property;
-            }
+            if (property.matchesByLocation(lowerKeyword)) return property;
         }
         return null; // No matching property found
     }

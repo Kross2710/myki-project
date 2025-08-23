@@ -77,7 +77,6 @@ public class Property {
 
     public boolean matchesByLocation(String keyword) {
         String lowerKeyword = keyword.toLowerCase();
-        return name.toLowerCase().contains(lowerKeyword) ||
-               location.toLowerCase().contains(lowerKeyword);
+        return location.toLowerCase().contains(lowerKeyword);
     }
 }
