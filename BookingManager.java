@@ -1,18 +1,44 @@
 import java.util.Scanner;
+import java.io.FileWriter;
+import java.io.IOException;
 
 public class BookingManager {
 
+    private static boolean isCancelled = false;
+
     public static void handleBooking(Property property) {
         Scanner scnr = Melbnb.scnr;
+        isCancelled = false;
+        String checkInDate = "";
+        String checkOutDate = "";
 
         System.out.print(Melbnb.RESET);
         Melbnb.pageBreak();
         System.out.println("> Provide dates");
         Melbnb.pageBreak();
-        System.out.print("Please provide check-in date (dd/mm/yyyy): " + Melbnb.GREEN);
-        String checkInDate = scnr.next();
-        System.out.print(Melbnb.RESET + "Please provide check-out date (dd/mm/yyyy): " + Melbnb.GREEN);
-        String checkOutDate = scnr.next();
+        while (true) {
+            System.out.print("Please provide check-in date (DD/MM/YYYY): " + Melbnb.GREEN);
+            checkInDate = scnr.nextLine().trim();
+            System.out.print(Melbnb.RESET);
+            if (!checkDateFormat(checkInDate)) {
+                System.out.println("Invalid date format. Please try again.");
+                continue; // Restart the loop for valid date input
+            }
+
+            System.out.print("Please provide check-out date (DD/MM/YYYY): " + Melbnb.GREEN);
+            checkOutDate = scnr.nextLine().trim();
+            System.out.print(Melbnb.RESET);
+            if (!checkDateFormat(checkOutDate)) {
+                System.out.println("Invalid date format. Please try again.");
+                continue; // Restart the loop for valid date input
+            }
+
+            if (checkInDate.equals(checkOutDate)) {
+                System.out.println("Check-in and check-out dates cannot be the same. Please try again.");
+                continue; // Restart the loop for valid date input
+            }
+            break; // Exit the loop after valid dates are provided
+        }
         System.out.print(Melbnb.RESET);
         int totalNights = calculateTotalNights(checkInDate, checkOutDate);
         Melbnb.pageBreak();
@@ -65,44 +91,52 @@ public class BookingManager {
         System.out.printf("%-22s$%.2f\n", "Total:", property.calculateBookingFee(totalNights));
         while (true) {
             System.out.print("Would you like to reserve the property (Y/N)? " + Melbnb.GREEN);
-            String reserveChoice = scnr.next().toUpperCase();
+            String reserveChoice = scnr.nextLine().toUpperCase();
             System.out.print(Melbnb.RESET);
             if (BookingManager.isYes(reserveChoice)) {
                 Melbnb.pageBreak();
                 System.out.println("> Provide personal information");
                 Melbnb.pageBreak();
                 System.out.print("Please provide your given name: " + Melbnb.GREEN);
-                String givenName = scnr.next();
+                String givenName = scnr.nextLine().trim();
                 System.out.print(Melbnb.RESET + "Please provide your surname: " + Melbnb.GREEN);
-                String surname = scnr.next();
+                String surname = scnr.nextLine().trim();
                 System.out.print(Melbnb.RESET + "Please provide your email address: " + Melbnb.GREEN);
-                String email = scnr.next();
-                System.out.print(Melbnb.RESET + "Please provide number of guests: " + Melbnb.GREEN);
-                int numberOfGuests = scnr.nextInt();
+                String email = scnr.nextLine().trim();
+                String numberOfGuestsStr = "";
+                int numberOfGuests;
+                while (true) {
+                    System.out.print(Melbnb.RESET + "Please provide number of guests: " + Melbnb.GREEN);
+                    numberOfGuestsStr = scnr.nextLine().trim();
+                    if (!numberOfGuestsStr.matches("\\d+")) {
+                        System.out.println("Invalid input. Please enter a valid number.");
+                        continue;
+                    } else if (Integer.parseInt(numberOfGuestsStr) <= 0) {
+                        System.out.println("Number of guests must be greater than 0. Please try again.");
+                        continue; // Restart the loop for valid number of guests input
+                    } else if (Integer.parseInt(numberOfGuestsStr) > property.getMaxGuests()) {
+                        System.out.println("Number of guests exceeds the maximum allowed (" + property.getMaxGuests()
+                                + "). Please try again.");
+                        continue; // Restart the loop for valid number of guests input
+                    }
+
+                    numberOfGuests = Integer.parseInt(numberOfGuestsStr);
+                    break; // Valid input, exit the loop
+                }
+
                 while (true) {
                     System.out.print(Melbnb.RESET + "Confirm and pay (Y/N): " + Melbnb.GREEN);
-                    String confirmPayment = scnr.next().toUpperCase();
+                    String confirmPayment = scnr.nextLine().toUpperCase();
                     System.out.print(Melbnb.RESET);
                     if (BookingManager.isYes(confirmPayment)) {
                         Client client = new Client(givenName, surname, email, numberOfGuests);
-                        Melbnb.pageBreak();
-                        System.out
-                                .printf("> Congratulations! Your trip is booked. A receipt has been sent to your email.\n");
-                        System.out.printf("  Details of your trip are shown below.\n");
-                        System.out.printf("  Your host will contact you before your trip. Enjoy your stay!\n");
-                        Melbnb.pageBreak();
-                        System.out.printf("%-22s%-22s\n", "Name:", client.getFullName());
-                        System.out.printf("%-22s%-22s\n", "Email:", client.getEmail());
-                        System.out.printf("%-22s%-22s\n", "Your stay:", property.getName());
-                        System.out.printf("%-22s%-22s\n", "", "by " + property.getHostName());
-                        System.out.printf("%-22s%-22d\n", "Who's coming:", client.getNumberOfGuests());
-                        System.out.printf("%-22s%-22s\n", "Check-in date:", checkInDate);
-                        System.out.printf("%-22s%-22s\n", "Check-out date:", checkOutDate);
-                        System.out.printf("%-22s$%.2f\n", "Total payment:", property.calculateBookingFee(totalNights));
+                        printReceipt(client, property, checkInDate, checkOutDate, totalNights);
                         break; // Exit the loop after payment confirmation
                     } else if (BookingManager.isNo(confirmPayment)) {
                         Melbnb.pageBreak();
                         System.out.println("> Payment cancelled.");
+                        System.out.println();
+                        isCancelled = true;
                         break; // Exit the loop without payment
                     } else {
                         System.out.println("Invalid choice. Please enter Y or N.");
@@ -112,6 +146,8 @@ public class BookingManager {
             } else if (BookingManager.isNo(reserveChoice)) {
                 Melbnb.pageBreak();
                 System.out.println("> Booking cancelled.");
+                System.out.println();
+                isCancelled = true;
                 break; // Exit the loop without reservation
             } else {
                 System.out.println("Invalid choice. Please enter Y or N.");
@@ -125,6 +161,14 @@ public class BookingManager {
 
     public static boolean isNo(String str) {
         return str.equalsIgnoreCase("no") || str.equalsIgnoreCase("n");
+    }
+
+    public static boolean checkDateFormat(String date) {
+        return date.matches("\\d{1,2}/\\d{1,2}/\\d{4}");
+    }
+
+    public static boolean isCancelled() {
+        return isCancelled;
     }
 
     public static int calculateTotalNights(String checkInDate, String checkOutDate) {
@@ -141,5 +185,40 @@ public class BookingManager {
 
         // Simple calculation assuming all months have 30 days for this example
         return (checkOutYear - checkInYear) * 365 + (checkOutMonth - checkInMonth) * 30 + (checkOutDay - checkInDay);
+    }
+
+    private static void printReceipt(Client client, Property property,
+            String checkInDate, String checkOutDate, int totalNights) {
+        Melbnb.pageBreak();
+        System.out.println("> Congratulations! Your trip is booked. A receipt has been sent to your email.");
+        System.out.println("  Details of your trip are shown below.");
+        System.out.println("  Your host will contact you before your trip. Enjoy your stay!");
+        Melbnb.pageBreak();
+        System.out.printf("%-22s%-22s\n", "Name:", client.getFullName());
+        System.out.printf("%-22s%-22s\n", "Email:", client.getEmail());
+        System.out.printf("%-22s%-22s\n", "Your stay:", property.getName());
+        System.out.printf("%-22s%-22s\n", "", "by " + property.getHostName());
+        System.out.printf("%-22s%-22d\n", "Who's coming:", client.getNumberOfGuests());
+        System.out.printf("%-22s%-22s\n", "Check-in date:", checkInDate);
+        System.out.printf("%-22s%-22s\n", "Check-out date:", checkOutDate);
+        System.out.printf("%-22s$%.2f\n", "Total payment:", property.calculateBookingFee(totalNights));
+
+        // this will later be a function
+        try (FileWriter writer = new FileWriter("receipt.txt", false)) {
+            writer.write("Congratulations! Your trip is booked. A receipt has been sent to your email.\n");
+            writer.write("Details of your trip are shown below.\n");
+            writer.write("Your host will contact you before your trip. Enjoy your stay!\n\n");
+            writer.write(String.format("%-22s%-22s\n", "Name:", client.getFullName()));
+            writer.write(String.format("%-22s%-22s\n", "Email:", client.getEmail()));
+            writer.write(String.format("%-22s%-22s\n", "Your stay:", property.getName()));
+            writer.write(String.format("%-22s%-22s\n", "", "by " + property.getHostName()));
+            writer.write(String.format("%-22s%-22d\n", "Who's coming:", client.getNumberOfGuests()));
+            writer.write(String.format("%-22s%-22s\n", "Check-in date:", checkInDate));
+            writer.write(String.format("%-22s%-22s\n", "Check-out date:", checkOutDate));
+            writer.write(String.format("%-22s$%.2f\n", "Total payment:", property.calculateBookingFee(totalNights)));
+            writer.flush();
+        } catch (IOException e) {
+            System.out.println("Error writing receipt to file: " + e.getMessage());
+        }
     }
 }

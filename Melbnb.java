@@ -4,8 +4,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
-import java.util.TreeSet;
-import java.util.Set;
 
 public class Melbnb {
 
@@ -64,12 +62,15 @@ public class Melbnb {
                     System.out.println("Invalid data format in line: " + line);
                 }
             }
+        } catch (IOException e) {
+            // ...
         }
 
         // Debugging line to check if properties are loaded correctly
         // System.out.println("DEBUG: Loaded " + propertyDatabase.getProperties().size()
         // + " properties from CSV file.");
 
+        // Options for users to choose to search for properties
         String[] options = {
                 "Search by location",
                 "Browse by type of place",
@@ -77,7 +78,8 @@ public class Melbnb {
                 "Exit"
         };
 
-        boolean running = true;
+        boolean running = true; // Loop value for main app
+        
         // Main loop for the Melbnb application
         while (running) {
             System.out.println(RESET + "Welcome to Melbnb!");
@@ -88,7 +90,7 @@ public class Melbnb {
                 System.out.println((i + 1) + ") " + options[i]);
             }
 
-            String choice = "";
+            String choice = "";  // try catch
             int validChoice;
             while (true) {
                 System.out.print(RESET + "Please select: " + GREEN);
@@ -105,7 +107,7 @@ public class Melbnb {
                 case 1:
                     while (true) {
                         System.out.print(RESET + "Please provide a location: " + GREEN);
-                        String location = scnr.nextLine();
+                        String location = scnr.nextLine(); // try catch
                         System.out.print(RESET);
                         pageBreak();
                         System.out.println("> Select from matching list");
@@ -124,7 +126,7 @@ public class Melbnb {
 
                         System.out.println(count + ") Back to main menu");
                         System.out.print(RESET + "Please select: " + GREEN);
-                        String subChoice = scnr.nextLine();
+                        String subChoice = scnr.nextLine(); // try catch
                         int validSubChoice;
                         if (isNumber(subChoice) && isValidChoice(Integer.parseInt(subChoice), count)) {
                             validSubChoice = Integer.parseInt(subChoice);
@@ -138,7 +140,10 @@ public class Melbnb {
                         } else if (validSubChoice > 0 && validSubChoice < count) {
                             Property selectedProperty = matchedProperties.get(validSubChoice - 1);
                             BookingManager.handleBooking(selectedProperty);
-                            running = false; // Exit after booking
+                            if (BookingManager.isCancelled()) {
+                                break;
+                            }
+                            running = false;
                             break;
                         } else {
                             System.out.println("Invalid input. Please try again.");
@@ -152,7 +157,7 @@ public class Melbnb {
                         System.out.println("> Browse by type of place");
                         pageBreak();
 
-                        List<String> types = propertyDatabase.getTypes();
+                        List<String> types = propertyDatabase.getTypes(); // check best type to store data yet?
                         int typeCount = types.size() + 1; // +1 for "Back to main menu"
                         for (int i = 0; i < types.size(); i++) {
                             String capitalizedType = types.get(i).substring(0, 1).toUpperCase()
@@ -162,7 +167,7 @@ public class Melbnb {
                         System.out.println(RESET + (types.size() + 1) + ") Back to main menu");
 
                         System.out.print(RESET + "Please select: " + GREEN);
-                        String subChoice = scnr.nextLine();
+                        String subChoice = scnr.nextLine(); // try catch
                         int validSubChoice;
                         if (isNumber(subChoice) && isValidChoice(Integer.parseInt(subChoice), typeCount)) {
                             validSubChoice = Integer.parseInt(subChoice);
@@ -185,7 +190,7 @@ public class Melbnb {
                                 System.out.println(RESET + (matchedType.size() + 1) + ") Back to main menu");
                                 System.out.print(RESET + "Please select: " + GREEN);
 
-                                String typeSubChoice = scnr.nextLine();
+                                String typeSubChoice = scnr.nextLine(); // try catch
                                 int validTypeSubChoice;
                                 if (isNumber(typeSubChoice)
                                         && isValidChoice(Integer.parseInt(typeSubChoice), matchedType.size() + 1)) {
@@ -211,45 +216,65 @@ public class Melbnb {
                     break;
 
                 case 3:
-                    pageBreak();
-                    System.out.println("> Filter by rating");
-                    pageBreak();
-                    System.out.print(RESET + "Please provide a minimum rating (0.0 - 5.0): " + GREEN);
-                    double minRating = scnr.nextDouble();
-                    System.out.print(RESET);
+                    while (true) {
+                        pageBreak();
+                        System.out.println("> Filter by rating");
+                        pageBreak();
+                        System.out.print(RESET + "Please provide a minimum rating (0 - 5): " + GREEN);
+                        String minRatingStr = scnr.nextLine().trim(); // try catch
+                        System.out.print(RESET);
 
-                    List<Property> filteredProperties = new ArrayList<>();
-                    for (Property property : propertyDatabase.getProperties()) {
-                        if (property.getRating() >= minRating) {
-                            filteredProperties.add(property);
+                        if (!isDouble(minRatingStr)) {
+                            System.out.println(RESET + "Invalid rating. Please try again.");
+                            continue; // Restart the loop for valid rating input
                         }
-                    }
-
-                    // Display filtered properties
-                    if (filteredProperties.isEmpty()) {
-                        System.out.println(RESET + "No properties found with a rating of " + minRating + " or higher.");
-                    } else {
-                        System.out.println(RESET + "Properties found:");
-                        for (int i = 0; i < filteredProperties.size(); i++) {
-                            System.out.println(RESET + (i + 1) + ") " + filteredProperties.get(i).getName() +
-                                    " - Rating: " + filteredProperties.get(i).getRating());
+                        double minRating = Double.parseDouble(minRatingStr);
+                        if (minRating < 0 || minRating > 5) {
+                            System.out.println(RESET + "Rating must be between 0 and 5. Please try again.");
+                            continue; // Restart the loop for valid rating input
                         }
-                        System.out.println(RESET + (filteredProperties.size() + 1) + ") Back to main menu");
-                        System.out.print(RESET + "Please select: " + GREEN);
 
-                        int ratingChoice = scnr.nextInt();
-                        if (ratingChoice == filteredProperties.size() + 1) {
-                            continue; // Go back to the main menu
-                        } else if (ratingChoice > 0 && ratingChoice <= filteredProperties.size()) {
-                            Property selectedProperty = filteredProperties.get(ratingChoice - 1);
-                            BookingManager.handleBooking(selectedProperty);
-                            running = false; // Exit after booking
+                        List<Property> filteredProperties = new ArrayList<>();
+                        for (Property property : propertyDatabase.getProperties()) {
+                            if (property.getRating() >= minRating) {
+                                filteredProperties.add(property);
+                            }
+                        }
+
+                        // Display filtered properties
+                        if (filteredProperties.isEmpty()) {
+                            System.out.println(
+                                    RESET + "No properties found with a rating of " + minRating + " or higher.");
                         } else {
-                            System.out.println(RESET + "Invalid selection. Please try again.");
-                            scnr.nextLine(); // Clear the buffer
-                            continue;
+                            System.out.println(RESET + "Properties found:");
+                            for (int i = 0; i < filteredProperties.size(); i++) {
+                                System.out.println(RESET + (i + 1) + ") " + filteredProperties.get(i).getName() +
+                                        " - Rating: " + filteredProperties.get(i).getRating());
+                            }
+                            System.out.println(RESET + (filteredProperties.size() + 1) + ") Back to main menu");
+                            System.out.print(RESET + "Please select: " + GREEN);
+                            String ratingChoiceStr = scnr.nextLine().trim(); // try catch
+                            System.out.print(RESET);
+
+                            if (!isNumber(ratingChoiceStr)) {
+                                System.out.println(RESET + "Invalid selection. Please try again.");
+                                continue; // Restart the loop for valid input
+                            }
+                            int ratingChoice = Integer.parseInt(ratingChoiceStr);
+
+                            if (ratingChoice == filteredProperties.size() + 1) {
+                                break; // Go back to the main menu
+                            } else if (ratingChoice > 0 && ratingChoice <= filteredProperties.size()) {
+                                Property selectedProperty = filteredProperties.get(ratingChoice - 1);
+                                BookingManager.handleBooking(selectedProperty);
+                                running = false; // Exit after booking
+                                break;
+                            } else {
+                                System.out.println(RESET + "Invalid selection. Please try again.");
+                            }
                         }
                     }
+                    break;
 
                 case 4:
                     running = false; // Exit the application
@@ -268,6 +293,15 @@ public class Melbnb {
     public static boolean isNumber(String str) {
         try {
             Integer.parseInt(str);
+            return true;
+        } catch (NumberFormatException e) {
+            return false;
+        }
+    }
+
+    public static boolean isDouble(String str) {
+        try {
+            Double.parseDouble(str);
             return true;
         } catch (NumberFormatException e) {
             return false;

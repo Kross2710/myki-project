@@ -3,7 +3,6 @@ import java.util.*;
 public class PropertyDatabase implements Searchable<Property> {
     private List<Property> properties;
     private Map<String, List<Property>> byType = new HashMap<>();
-    private Map<String, List<Property>> byLocation = new HashMap<>();
 
     public PropertyDatabase() {
         this.properties = new ArrayList<>();
@@ -18,8 +17,6 @@ public class PropertyDatabase implements Searchable<Property> {
         // index by type
         String t = property.getType().toLowerCase();
         byType.computeIfAbsent(t, k -> new ArrayList<>()).add(property);
-        // index by location
-        byLocation.computeIfAbsent(property.getLocation(), k -> new ArrayList<>()).add(property);
     }
 
     public List<Property> getProperties() { return properties; }
